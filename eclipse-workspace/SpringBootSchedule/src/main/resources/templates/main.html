@@ -1,0 +1,116 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+	<head>
+		
+		<meta http-equiv="Content-Type" Content="text/html;charset=utf-8">
+		<!-- FullCalender メインCSSのリンク -->
+		<link href='./lib/main.css' rel='stylesheet' />
+		<!-- ▼ColorboxのCSSを読み込む記述 -->
+		<link href="./lib/colorbox.css" rel="stylesheet" />
+		<!-- FullCalender メインJSの読み込み -->
+		<script src='./lib/main.js'></script>
+		<!-- ヘッダ部分の日本語化JS(locales-all.js)の読み込み -->
+		<script src="./lib/locales-all.js"></script>
+		<!-- Popper JSの読み込み -->
+		<script src='https://unpkg.com/popper.js/dist/umd/popper.min.js'></script>
+		<script src='https://unpkg.com/tooltip.js/dist/umd/tooltip.min.js'></script>
+		<!-- Popper用 CSSのリンク -->
+		<link href='./css/popup.css' rel='stylesheet' />
+		<!-- ▼jQueryとColorboxのスクリプトを読み込む記述 -->
+		<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+		<script src="./lib/jquery.colorbox-min.js"></script>
+		<script src="./lib/jquery.colorbox-ja.js"></script>
+		<link href='./css/main.css' rel='stylesheet' />
+		<script type="text/javascript" th:inline="javascript">
+		/*<![CDATA[*/
+			// jQueryでのpost送信用に、formデータを生成するメソッド
+			function createFormInputsFromObject(data, prefix) {
+				prefix = prefix || '';
+				var inputs = '';
+				// 引数で渡された全ての項目に対して処理
+				$.each(data, function(name, value){
+					if (prefix !== '') name = prefix + '[' + name + ']';
+					// 該当項目が配列の場合は再帰処理
+					if (Array.isArray(value) || value instanceof Object) {
+						inputs += createFormInputsFromObject(value, name);
+					} else {
+					// hidden属性を持つinputタグをname,valueをセットし生成
+						inputs += $('<input>').attr({type: 'hidden', name: name, value: value}).prop('outerHTML');
+					}
+				});
+
+				return inputs;
+			}
+			document.addEventListener('DOMContentLoaded', function() {
+				// カレンダー設定
+				const calendarEl = document.getElementById('calendar');
+				const calendar = new FullCalendar.Calendar(calendarEl, {
+					// ヘッダツールバー設定
+					//   （左：戻る、次へ、今日）
+					//   （中央：タイトル）
+					//   （右：月、週、日）
+					headerToolbar: {
+						left: 'prev,next today',
+						center: 'title',
+						right: 'dayGridMonth,timeGridWeek,timeGridDay'
+					},
+					// ロケール設定：日本語
+					locale: 'ja',
+					// 初期日時
+					initialDate:  /*[[${initialDate}]]*/ '2020-07-31',
+					// 日付のリンク設定(クリックすると日単位の表示へ)
+					navLinks: true, 
+					// 営業時間表示（土日の背景切り替えもこの設定)
+					businessHours: true, 
+					// 編集可否
+					editable: false,
+					// 選択可否
+					selectable: true,
+					// 時間の表示書式(h:mm)
+					eventTimeFormat: { hour: 'numeric', minute: '2-digit' },
+					// eventDidMount=イベント毎のDOM生成後の処理
+					// 対象のイベント項目にPopperを適用する
+					eventDidMount: function(info) {
+						const tooltip = new Tooltip(info.el, {
+							title: info.event.extendedProps.description,
+							placement: 'top',
+							trigger: 'hover',
+							container: 'body'
+						});		
+					},
+					// 対象イベントのクリック処理
+					eventClick: function(info) {
+						$.colorbox({
+								width:"80%", height:"80%", iframe:true,
+								onComplete: function() {
+									// onComplete=iframeの表示完了時にpost送信を自動実行
+									// iframeのdom要素を取得
+									const iframe = jQuery('#cboxLoadedContent iframe');
+									// 送信するformタグを生成
+									const form = jQuery('<form>').attr({action: "./	scheduleMainte", method: 'POST', target: iframe.attr('name')});
+									// post送信するデータ
+									const postData = {id: info.event.id, title: info.event.title}
+									// post送信データを基に、formタグにinputタグを付加する
+									$(createFormInputsFromObject(postData)).appendTo(form);
+									// 生成したformをsubmit実行
+									form.appendTo(iframe)
+										.submit()
+										.remove();
+								}
+								});	
+					},
+					// イベント(スケジュール)情報
+					events:  /*[(${events})]*/
+				});
+
+				calendar.render();
+			});
+			/*]]>*/
+		</script>
+		
+
+	</head>
+	<body>
+		<div id="calendar"></div>
+	</body>
+</html>
